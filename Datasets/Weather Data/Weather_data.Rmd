@@ -1,0 +1,64 @@
+# Pulling and finding the highest recorded rainfall in mm in Auckland for years 1960-2022
+
+```{bash eval=FALSE}
+if [ ! -e akl.json ]; then
+  curl -o akl.json 'https://archive-api.open-meteo.com/v1/era5?latitude=-36.87&longitude=174.76&start_date=1960-01-01&end_date=2022-10-01&hourly=precipitation,soil_moisture_0_to_7cm,soil_moisture_7_to_28cm,soil_moisture_28_to_100cm,soil_moisture_100_to_255cm&timezone=Pacific%2FAuckland&timeformat=unixtime'
+fi
+
+if [! -e daily.json]; then 
+  curl -o daily.json 'https://archive-api.open-meteo.com/v1/era5?latitude=-36.87&longitude=174.76&start_date=1960-01-01&end_date=2022-10-01&daily=rain_sum&timezone=Pacific%2FAuckland&timeformat=unixtime'
+fi
+```
+
+# Imports
+```{r}
+# install.packages("lubridate")
+library(jsonlite)
+library(lubridate)
+```
+
+# Reading the file with hourly rainfall and soil data
+```{r eval = FALSE}
+jd = fromJSON("akl.json")
+str(jd)
+```
+
+# Creating a dataframe and saving it as a Rda file so that it can be easily used in the future
+```{r eval = FALSE}
+weather <- data.frame(time = as.POSIXct(jd$hourly$time, origin = '1970-01-01'), precipitation = jd$hourly$precipitation, soil_moisture_0_to_7cm = jd$hourly$soil_moisture_0_to_7cm, soil_moisture_7_to_28cm = jd$hourly$soil_moisture_7_to_28cm, soil_moisture_28_to_100cm = jd$hourly$soil_moisture_28_to_100cm, soil_moisture_100_to_255cm = jd$hourly$soil_moisture_100_to_255cm)
+
+nrow(weather)
+save(weather,file="weather.Rda")
+```
+
+# Reading the file with daily rainfall and saving it
+```{r eval = FALSE}
+jd = fromJSON("daily.json")
+daily <- data.frame(time = as.POSIXct(jd$daily$time, origin = '1970-01-01'), daily_rain = jd$daily$rain_sum)
+save(weather,file="daily.Rda")
+```
+
+# Loading the files and extracting the data
+```{r}
+load('weather.Rda')
+load('daily.Rda')
+
+#(mean(weather$precipitation, weather$precipitation != 0, na.rm = TRUE))
+#(mean(daily$daily_rain, daily$daily_rain != 0 na.rm = TRUE))
+max_weather <- which.max(weather$precipitation)
+(weather[max_weather, ])
+```
+
+```{r}
+summary(weather)
+```
+
+```{r}
+max_daily <- which.max(daily$daily_rain)
+(daily[max_daily, ])
+```
+
+```{r}
+summary(daily)
+```
+
